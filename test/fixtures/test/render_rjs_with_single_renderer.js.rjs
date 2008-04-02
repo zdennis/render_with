@@ -1,0 +1,3 @@
+render_with :test do |renderer|
+  renderer.set_notice "This is the notice"
+end

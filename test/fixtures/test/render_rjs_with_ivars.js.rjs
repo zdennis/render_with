@@ -1,0 +1,3 @@
+render_with :test do |renderer|
+  renderer.display_ivar
+end

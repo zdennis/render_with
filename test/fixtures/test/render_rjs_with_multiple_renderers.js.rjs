@@ -1,0 +1,7 @@
+render_with :test do |renderer|
+  renderer.set_notice "This is the test notice"
+end
+
+render_with :example do |renderer|
+  renderer.set_notice "This is the example notice"
+end
