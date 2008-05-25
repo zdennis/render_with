@@ -1,4 +1,6 @@
 class Renderer
+  include ActionController::UrlWriter
+  
   def initialize(context, generator_factory=ActionView::Helpers::PrototypeHelper::JavaScriptGenerator)
     # include_helpers_from(context)
     @context = context
