@@ -1,13 +1,27 @@
 class Renderer
   include ActionController::UrlWriter
+
+  attr_reader :page
   
-  def initialize(context, generator_factory=ActionView::Helpers::PrototypeHelper::JavaScriptGenerator)
-    # include_helpers_from(context)
-    @context = context
-    context.assigns.each_pair do |key,value|
-      instance_variable_set "@#{key}", value
+  def initialize(page=nil, context=nil)
+    if context
+      @context = context
+      
+      # allow an array of assignments to be passed in for testing
+      assigns = context.is_a?(Hash) ? context : context.assigns
+      
+      assigns.each_pair do |key,value|
+        instance_variable_set "@#{key}", value
+      end
     end
-    @page = generator_factory.new(context) {}
+    
+    if page
+      @page = page
+    elsif context
+      @page = ActionView::Helpers::PrototypeHelper::JavaScriptGenerator.new(context){}
+    else
+      raise ArgumentError, "can't construct a page without a context"
+    end
   end
   
   def to_s
@@ -15,27 +29,28 @@ class Renderer
   end
 
 private
-  # def include_helpers_from(context)
-  #   context.extended_by.each do |mod|
-  #     extend mod
-  #   end
-  # end
   
   def method_missing(*args, &block)
-    if @page.respond_to?(args.first)
-      @page.send(*args, &block)
-    else
-      @context.send *args, &block
-    end
+    @context.send *args, &block
   end
-  
 end
 
 class ActionView::Base
   def render_with(renderer_name, &block)
-    renderer = "#{renderer_name}_renderer".classify.constantize.new(@template)
-    yield renderer
     page = eval("page", block.binding)
-    page << renderer.to_s
+    renderer = "#{renderer_name}_renderer".classify.constantize.new(page, @template)
+    yield renderer
+  end
+end
+
+# Alternative way to use render_with. Doesn't rely on eval voodoo.
+# example use:
+# page.render_with :foo do |foo|
+#   foo.do_something_cool
+# end
+module ActionView::Helpers::PrototypeHelper::JavaScriptGenerator::GeneratorMethods
+  def render_with(renderer_name, &block)
+    renderer = "#{renderer_name}_renderer".classify.constantize.new(self, @context)
+    yield renderer
   end
 end
