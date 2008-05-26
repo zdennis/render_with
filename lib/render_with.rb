@@ -1,41 +1,52 @@
 class Renderer
   include ActionController::UrlWriter
-
-  def initialize(context, generator_factory=ActionView::Helpers::PrototypeHelper::JavaScriptGenerator)
-    # include_helpers_from(context)
+ 
+  attr_reader :page
+  
+  def initialize(page=nil, assigns=nil, context=nil)
     @context = context
-    context.assigns.each_pair do |key,value|
-      instance_variable_set "@#{key}", value
+    if assigns
+      assigns.each_pair do |key,value|
+        instance_variable_set "@#{key}", value
+      end
     end
-    @page = generator_factory.new(context) {}
+    
+    if page
+      @page = page
+    elsif context
+      @page = ActionView::Helpers::PrototypeHelper::JavaScriptGenerator.new(context){}
+    else
+      raise ArgumentError, "can't construct a page without a context"
+    end
   end
   
   def to_s
     @page.to_s
   end
-
+ 
 private
-  # def include_helpers_from(context)
-  #   context.extended_by.each do |mod|
-  #     extend mod
-  #   end
-  # end
   
   def method_missing(*args, &block)
-    if @page.respond_to?(args.first) 
-      @page.send(*args, &block)
-    else
-      @context.send *args, &block
-    end
+    @context.send *args, &block
   end
-  
 end
-
+ 
 class ActionView::Base
   def render_with(renderer_name, &block)
-    renderer = "#{renderer_name}_renderer".classify.constantize.new(@template)
-    yield renderer
     page = eval("page", block.binding)
-    page << renderer.to_s
+    renderer = "#{renderer_name}_renderer".classify.constantize.new(page, @template.assigns, @template)
+    yield renderer
+  end
+end
+ 
+# Alternative way to use render_with. Doesn't rely on eval voodoo.
+# example use:
+# page.render_with :foo do |foo|
+#   foo.do_something_cool
+# end
+module ActionView::Helpers::PrototypeHelper::JavaScriptGenerator::GeneratorMethods
+  def render_with(renderer_name, &block)
+    renderer = "#{renderer_name}_renderer".classify.constantize.new(self, @context.assigns, @context)
+    yield renderer
   end
 end
