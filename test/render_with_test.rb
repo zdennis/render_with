@@ -2,11 +2,11 @@ require File.dirname(__FILE__) + '/test_helper'
 
 class TestRenderer < Renderer
   def display_ivar
-    replace :foo_container, @foo
+    page.replace :foo_container, @foo
   end
     
   def set_notice msg
-    replace_html :notice, msg
+    page.replace_html :notice, msg
   end
 end
 
@@ -15,6 +15,15 @@ end
 
 
 class TestController < ActionController::Base
+  def render_inline_update
+    @foo = "Goodbye World!"
+    render :update do |p|
+      p.render_with :test do |renderer|
+        renderer.display_ivar
+      end
+    end
+  end
+  
   def render_rjs_with_ivars
     @foo = 'Hello World!'
     respond_to :js
@@ -37,6 +46,11 @@ class RenderWithRendererTest < Test::Unit::TestCase
     @controller = TestController.new
 
     @request.host = "www.nextangle.com"
+  end
+  
+  def test_it_renders_inline_update_with_a_single_renderer
+    xhr :get, :render_inline_update
+    assert_match 'Element.replace("foo_container", "Goodbye World!")'.to_regexp, @response.body, "didn't have the ivar's value in the renderered RJS"
   end
   
   def test_it_renders_rjs_with_a_single_renderer
