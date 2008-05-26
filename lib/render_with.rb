@@ -1,4 +1,6 @@
 class Renderer
+  include ActionController::UrlWriter
+
   def initialize(context, generator_factory=ActionView::Helpers::PrototypeHelper::JavaScriptGenerator)
     # include_helpers_from(context)
     @context = context
@@ -20,7 +22,7 @@ private
   # end
   
   def method_missing(*args, &block)
-    if @page.respond_to?(args.first)
+    if @page.respond_to?(args.first) 
       @page.send(*args, &block)
     else
       @context.send *args, &block
